@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="NPS計算">
+<meta name="theme-color" content="#f5f5f7">
+<title>NPS 目標達成 計算ツール</title>
+<style>
+  :root {
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --text: #1d1d1f;
+    --sub: #6e6e73;
+    --line: #e3e3e6;
+    --blue: #0071e3;
+    --green: #34c759;
+    --orange: #ff9f0a;
+    --red: #ff3b30;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 24px 16px 64px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 600; text-align: center; margin: 8px 0 4px; }
+  .tagline { text-align: center; color: var(--sub); font-size: 14px; margin-bottom: 28px; }
+  .card {
+    background: var(--card);
+    border-radius: 18px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .card h2 { font-size: 15px; font-weight: 600; color: var(--sub); margin: 0 0 18px; letter-spacing: .02em; }
+
+  /* settings */
+  .field-row { display: flex; flex-wrap: wrap; gap: 20px; }
+  .field { flex: 1 1 200px; }
+  .field label { display: block; font-size: 13px; color: var(--sub); margin-bottom: 6px; }
+  .field input {
+    width: 100%; font-size: 18px; padding: 10px 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: #fafafa;
+    font-family: inherit; color: var(--text);
+  }
+  .field input:focus { outline: none; border-color: var(--blue); background: #fff; }
+  .days { font-size: 13px; color: var(--sub); margin-top: 6px; min-height: 18px; }
+
+  /* tally rows */
+  .tally { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .tally:last-child { border-bottom: none; }
+  .tally .score { width: 96px; flex-shrink: 0; }
+  .tally .score .num { font-size: 22px; font-weight: 600; }
+  .tally .score .tag { font-size: 11px; color: var(--sub); display: block; }
+  .tally.top .score .num { color: var(--green); }
+  .tally.top .tag { color: var(--green); }
+  .tally.det .score .num { color: var(--red); }
+  .btn-step {
+    width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line);
+    background: #fff; font-size: 24px; line-height: 1; cursor: pointer; color: var(--text);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    transition: background .12s; -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation; -webkit-user-select: none; user-select: none;
+  }
+  .btn-step:hover { background: #f0f0f2; }
+  .btn-step:active { background: #e0e0e3; }
+  .tally input.count {
+    width: 72px; text-align: center; font-size: 20px; padding: 8px;
+    border: 1px solid var(--line); border-radius: 10px; font-family: inherit;
+  }
+  .tally input.count:focus { outline: none; border-color: var(--blue); }
+  .tally .pts { margin-left: auto; font-size: 13px; color: var(--sub); width: 64px; text-align: right; }
+  .total-line { text-align: right; font-size: 14px; color: var(--sub); margin-top: 14px; }
+
+  /* result */
+  .result { text-align: center; }
+  .score-big { font-size: 64px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+  .score-label { font-size: 13px; color: var(--sub); }
+  .bar { height: 8px; background: var(--line); border-radius: 4px; margin: 22px 0 6px; position: relative; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; background: var(--blue); width: 0; transition: width .3s; }
+  .bar-meta { display: flex; justify-content: space-between; font-size: 12px; color: var(--sub); }
+  .headline {
+    margin-top: 24px; padding: 22px; border-radius: 14px; background: #f0f7ff;
+    font-size: 17px;
+  }
+  .headline.done { background: #effaf1; }
+  .headline.warn { background: #fff6e9; }
+  .headline .big { font-size: 40px; font-weight: 700; color: var(--blue); display: block; margin: 4px 0; }
+  .headline.done .big { color: var(--green); }
+  .headline .sub { font-size: 13px; color: var(--sub); }
+
+  .actions { text-align: center; margin-top: 8px; }
+  .btn-reset {
+    background: none; border: none; color: var(--blue); font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+  .btn-reset:hover { text-decoration: underline; }
+
+  details.how { margin-top: 4px; }
+  details.how summary { cursor: pointer; color: var(--sub); font-size: 13px; }
+  details.how p, details.how code { font-size: 13px; color: var(--sub); }
+  details.how code { background: #f0f0f2; padding: 2px 6px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NPS 目標達成 計算ツール</h1>
+  <p class="tagline">目標まで「最高評価（5）」をあと何個取ればいいかを計算します</p>
+
+  <!-- 設定 -->
+  <div class="card">
+    <h2>設定</h2>
+    <div class="field-row">
+      <div class="field">
+        <label for="target">目標 NPS スコア（−100〜100）</label>
+        <input type="number" id="target" min="-100" max="100" step="1" value="70">
+      </div>
+      <div class="field">
+        <label for="qend">クォーター終了日（任意）</label>
+        <input type="date" id="qend">
+        <div class="days" id="daysLeft"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 回答入力 -->
+  <div class="card">
+    <h2>回答の入力（評価ごとの件数）</h2>
+    <div id="tallies"></div>
+    <div class="total-line">回答数の合計: <strong id="totalCount">0</strong> 件</div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="card result">
+    <h2 style="text-align:left;">結果</h2>
+    <div class="score-big" id="npsScore">–</div>
+    <div class="score-label">現在の NPS スコア</div>
+
+    <div class="bar"><div class="bar-fill" id="barFill"></div></div>
+    <div class="bar-meta"><span>−100</span><span id="targetMark">目標 70</span><span>+100</span></div>
+
+    <div class="headline" id="headline">
+      <span class="sub">回答を入力すると計算されます</span>
+    </div>
+
+    <div class="actions">
+      <button class="btn-reset" id="resetBtn">このクォーターをリセット</button>
+    </div>
+
+    <details class="how">
+      <summary>計算方法について</summary>
+      <p>各回答を点数化します：<code>5 → +100</code>、<code>4 → 0</code>、<code>1・2・3 → −100</code>。<br>
+      NPS =（点数の合計）÷（回答数）。<br>
+      「あと何個」は、<strong>残りの回答がすべて最高評価（5）だった場合の最小数</strong>です：<br>
+      <code>k = 切り上げ( (目標×回答数 − 100×(5の数 − 1〜3の数)) ÷ (100 − 目標) )</code></p>
+    </details>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var STORAGE_KEY = "nps-calc-v1";
+
+  // 評価定義: value, ラベル, 寄与点
+  var SCORES = [
+    { v: 5, tag: "最高評価 (+100)", cls: "top", pts: 100 },
+    { v: 4, tag: "中立 (0)",        cls: "",    pts: 0 },
+    { v: 3, tag: "−100",            cls: "det", pts: -100 },
+    { v: 2, tag: "−100",            cls: "det", pts: -100 },
+    { v: 1, tag: "−100",            cls: "det", pts: -100 }
+  ];
+
+  var state = { target: 70, qend: "", counts: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } };
+
+  var el = {
+    target: document.getElementById("target"),
+    qend: document.getElementById("qend"),
+    daysLeft: document.getElementById("daysLeft"),
+    tallies: document.getElementById("tallies"),
+    totalCount: document.getElementById("totalCount"),
+    npsScore: document.getElementById("npsScore"),
+    barFill: document.getElementById("barFill"),
+    targetMark: document.getElementById("targetMark"),
+    headline: document.getElementById("headline"),
+    resetBtn: document.getElementById("resetBtn")
+  };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var s = JSON.parse(raw);
+        if (typeof s.target === "number") state.target = s.target;
+        if (typeof s.qend === "string") state.qend = s.qend;
+        if (s.counts) {
+          [5,4,3,2,1].forEach(function (v) {
+            state.counts[v] = Number(s.counts[v]) || 0;
+          });
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function buildTallies() {
+    SCORES.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "tally " + s.cls;
+      row.innerHTML =
+        '<div class="score"><span class="num">' + s.v + '</span>' +
+        '<span class="tag">' + s.tag + '</span></div>' +
+        '<button class="btn-step" data-act="dec" data-v="' + s.v + '" aria-label="減らす">−</button>' +
+        '<input class="count" type="number" inputmode="numeric" pattern="[0-9]*" min="0" step="1" data-v="' + s.v + '" value="0">' +
+        '<button class="btn-step" data-act="inc" data-v="' + s.v + '" aria-label="増やす">+</button>' +
+        '<span class="pts">' + (s.pts > 0 ? "+" : "") + s.pts + ' 点</span>';
+      el.tallies.appendChild(row);
+    });
+
+    el.tallies.addEventListener("click", function (e) {
+      var btn = e.target.closest(".btn-step");
+      if (!btn) return;
+      var v = btn.getAttribute("data-v");
+      var delta = btn.getAttribute("data-act") === "inc" ? 1 : -1;
+      state.counts[v] = Math.max(0, (state.counts[v] || 0) + delta);
+      syncInputs(); render(); save();
+    });
+
+    el.tallies.addEventListener("input", function (e) {
+      var inp = e.target.closest("input.count");
+      if (!inp) return;
+      var v = inp.getAttribute("data-v");
+      var n = parseInt(inp.value, 10);
+      state.counts[v] = isNaN(n) || n < 0 ? 0 : n;
+      render(); save();
+    });
+  }
+
+  function syncInputs() {
+    var inputs = el.tallies.querySelectorAll("input.count");
+    inputs.forEach(function (inp) {
+      inp.value = state.counts[inp.getAttribute("data-v")] || 0;
+    });
+  }
+
+  function computeDaysLeft() {
+    if (!state.qend) { el.daysLeft.textContent = ""; return; }
+    var end = new Date(state.qend + "T23:59:59");
+    var now = new Date();
+    var ms = end - now;
+    var days = Math.ceil(ms / 86400000);
+    if (isNaN(days)) { el.daysLeft.textContent = ""; return; }
+    if (days > 1) el.daysLeft.textContent = "残り約 " + days + " 日";
+    else if (days === 1) el.daysLeft.textContent = "残り1日";
+    else if (days === 0) el.daysLeft.textContent = "本日が最終日";
+    else el.daysLeft.textContent = "終了済み";
+  }
+
+  function render() {
+    var c = state.counts;
+    var promoters = c[5] || 0;
+    var detractors = (c[3] || 0) + (c[2] || 0) + (c[1] || 0);
+    var total = promoters + (c[4] || 0) + detractors;
+    var net = promoters - detractors;
+    var G = clamp(Number(state.target), -100, 100);
+
+    el.totalCount.textContent = total;
+    el.targetMark.textContent = "目標 " + G;
+
+    if (total === 0) {
+      el.npsScore.textContent = "–";
+      el.barFill.style.width = "0";
+      setHeadline("", '<span class="sub">回答を入力すると計算されます</span>');
+      return;
+    }
+
+    var nps = (net * 100) / total; // = 点数合計 ÷ 回答数
+    el.npsScore.textContent = formatScore(nps);
+    el.npsScore.style.color = nps >= G ? "var(--green)" : "var(--text)";
+
+    // bar: -100..100 -> 0..100%
+    el.barFill.style.width = ((nps + 100) / 2) + "%";
+    el.barFill.style.background = nps >= G ? "var(--green)" : "var(--blue)";
+
+    // 「あと何個」
+    if (nps >= G) {
+      setHeadline("done",
+        '<span class="sub">目標達成中です</span>' +
+        '<span class="big">達成 🎉</span>' +
+        '<span class="sub">現在 ' + formatScore(nps) + ' ／ 目標 ' + G + '</span>');
+      return;
+    }
+
+    if (G >= 100) {
+      // ここに来る時点で未達 = 100点でない回答が必ず存在する。
+      // 中立(4)や批判(1〜3)が1件でもあると、最高評価をいくつ足しても100には届かない。
+      setHeadline("warn",
+        '<span class="sub">目標が100の場合</span>' +
+        '<span class="big">到達不可</span>' +
+        '<span class="sub">中立(4)や批判(1〜3)が1件でもあると、最高評価をいくつ足しても100には届きません</span>');
+      return;
+    }
+
+    var k = Math.ceil((G * total - 100 * net) / (100 - G));
+    if (k < 0) k = 0;
+    setHeadline("",
+      '<span class="sub">目標達成まで、最高評価（5）があと</span>' +
+      '<span class="big">' + k + ' 個</span>' +
+      '<span class="sub">（残りの回答がすべて最高評価だった場合の最小数）<br>' +
+      '達成後の回答数: ' + (total + k) + ' 件</span>');
+  }
+
+  function setHeadline(cls, html) {
+    el.headline.className = "headline" + (cls ? " " + cls : "");
+    el.headline.innerHTML = html;
+  }
+
+  function formatScore(n) {
+    var r = Math.round(n * 10) / 10;
+    return (r > 0 ? "+" : "") + r;
+  }
+
+  function clamp(n, lo, hi) {
+    if (isNaN(n)) return 0;
+    return Math.min(hi, Math.max(lo, n));
+  }
+
+  function reset() {
+    if (!confirm("回答数をすべて0に戻します。よろしいですか？")) return;
+    state.counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    syncInputs(); render(); save();
+  }
+
+  // init
+  load();
+  buildTallies();
+  el.target.value = state.target;
+  el.qend.value = state.qend;
+  syncInputs();
+  computeDaysLeft();
+  render();
+
+  el.target.addEventListener("input", function () {
+    state.target = clamp(Number(el.target.value), -100, 100);
+    render(); save();
+  });
+  el.qend.addEventListener("change", function () {
+    state.qend = el.qend.value;
+    computeDaysLeft(); save();
+  });
+  el.resetBtn.addEventListener("click", reset);
+})();
+</script>
+</body>
+</html>
